@@ -79,6 +79,10 @@ To run the training script, use a command-line that follows the template below.
 ```
 python3 train.py -tk [0] -f [1] -ds [2]
 ```
+Example:
+```
+python train.py -tk fact -f articles_body_bert -ds acl2020
+```
 
 where
 * [0] is the task at hand: "fact" or "bias" prediction

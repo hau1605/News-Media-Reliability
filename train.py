@@ -96,7 +96,7 @@ def parse_arguments():
         "-hd",
         "--home_dir",
         type=str,
-        default="/Users/baly/Projects/News-Media-Reliability",
+        default="",
         help="the directory that contains the project files"
     )
 	parser.add_argument(
@@ -142,11 +142,9 @@ if __name__ == "__main__":
 	summary.add_row(["task", args.task])
 	summary.add_row(["classification mode", "single classifier"])
 	summary.add_row(["features", ", ".join(args.features)])
-	print(summary)
 
 	# read the dataset
 	df = pd.read_csv(os.path.join(args.home_dir, "data", args.dataset, "corpus.tsv"), sep="\t")
-
 	# create a dictionary: the keys are the media and the values are their corresponding labels (transformed to int)
 	labels = {df["source_url_normalized"][i]: label2int[args.task][df[args.task][i]] for i in range(df.shape[0])}
 
@@ -159,9 +157,9 @@ if __name__ == "__main__":
 
 	# create placeholders where predictions will be cumulated over the different folds
 	all_urls = []
-	actual = np.zeros(df.shape[0], dtype=np.int)
-	predicted = np.zeros(df.shape[0], dtype=np.int)
-	probs = np.zeros((df.shape[0], args.num_labels), dtype=np.float)
+	actual = np.zeros(df.shape[0], dtype=int)
+	predicted = np.zeros(df.shape[0], dtype=int)
+	probs = np.zeros((df.shape[0], args.num_labels), dtype=float)
 
 	i = 0
 
@@ -182,12 +180,12 @@ if __name__ == "__main__":
 		X, y = {}, {}
 
 		# concatenate the different features/labels for the training sources
-		X["train"] = np.asmatrix([list(itertools.chain(*[features[feat][url] for feat in args.features])) for url in urls["train"]]).astype("float")
-		y["train"] = np.array([labels[url] for url in urls["train"]], dtype=np.int)
+		X["train"] = np.asarray([list(itertools.chain(*[features[feat][url] for feat in args.features])) for url in urls["train"]]).astype("float")
+		y["train"] = np.array([labels[url] for url in urls["train"]], dtype=int)
 
 		# concatenate the different features/labels for the testing sources
-		X["test"] = np.asmatrix([list(itertools.chain(*[features[feat][url] for feat in args.features])) for url in urls["test"]]).astype("float")
-		y["test"] = np.array([labels[url] for url in urls["test"]], dtype=np.int)
+		X["test"] = np.asarray([list(itertools.chain(*[features[feat][url] for feat in args.features])) for url in urls["test"]]).astype("float")
+		y["test"] = np.array([labels[url] for url in urls["test"]], dtype=int)
 
 		# normalize the features values
 		scaler = MinMaxScaler()
