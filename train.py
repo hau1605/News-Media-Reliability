@@ -15,7 +15,6 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import confusion_matrix, f1_score, accuracy_score
 
-
 import numpy as np
 np.random.seed(16)
 
@@ -73,6 +72,7 @@ def parse_arguments():
 		default="",
 		required=True,
 		help="the features that will be used in the current experiment (comma-separated)",
+		# Các tính năng sẽ được sử dụng trong thử nghiệm hiện tại (phân cách bằng dấu phẩy)
 	)
 	parser.add_argument(
 		"-tk",
@@ -81,6 +81,7 @@ def parse_arguments():
 		default="fact",
 		required=True,
 		help="the task for which the model is trained: (fact or bias)",
+		# Nhiệm vụ mà mô hình được đào tạo: thật, giả
 	)
 
     # Boolean command-line arguments
@@ -89,6 +90,7 @@ def parse_arguments():
         "--clear_cache",
         action="store_true",
         help="flag to whether the corresponding features file need to be deleted before re-computing",
+		# Cờ để xác định việc xóa các file tính năng tương ứng hay không trước khi tính toán lại
     )
 	
     # Other command-line arguments
@@ -98,6 +100,7 @@ def parse_arguments():
         type=str,
         default="",
         help="the directory that contains the project files"
+		# Thư mục chưa các tập tin của dự án
     )
 	parser.add_argument(
         "-ds",
@@ -105,6 +108,7 @@ def parse_arguments():
         type=str,
         default="acl2020",
         help="the name of the dataset for which we are building the media objects",
+		# Tên của tập dữ liệu được dùng để xây dựng các đối tượng phương tiện
     )
 	parser.add_argument(
 		"-nl",
@@ -112,13 +116,13 @@ def parse_arguments():
 		type=int,
 		default=3,
 		help="the number of classes of the given task",
+		# Số lớp của nhiệm vụ
 	)
 
 	return parser.parse_args()
 
 
 if __name__ == "__main__":
-
 	# parse the command-line arguments
 	args = parse_arguments()
 
@@ -129,9 +133,11 @@ if __name__ == "__main__":
 	args.features = sorted([feature for feature in args.features.split(",")])
 
 	# specify the output directory where the results will be stored
+	# chỉ định thư mục đầu ra nơi kết quả sẽ được lưu trữ
 	out_dir = os.path.join(args.home_dir, "data", args.dataset, f"results", f"{args.task}_{','.join(args.features)}")
 
 	# remove the output directory (if it already exists and args.clear_cache was set to TRUE)
+	# xóa thư mục đầu ra (nếu nó đã tồn tại và args.clear_cache được đặt thành TRUE)
 	shutil.rmtree(out_dir) if args.clear_cache and os.path.exists(out_dir) else None
 
 	# create the output directory
@@ -167,7 +173,6 @@ if __name__ == "__main__":
 
 	for f in range(num_folds):
 		logger.info(f"Fold: {f}")
-
 		# get the training and testing media for the current fold
 		urls = {
 			"train": splits[str(f)]["train"],
@@ -175,25 +180,28 @@ if __name__ == "__main__":
 		}
 
 		all_urls.extend(splits[str(f)]["test"])
-
 		# initialize the features and labels matrices
 		X, y = {}, {}
 
 		# concatenate the different features/labels for the training sources
+		# kết hợp các tính năng/nhãn khác nhau cho các nguồn đào tạo
 		X["train"] = np.asarray([list(itertools.chain(*[features[feat][url] for feat in args.features])) for url in urls["train"]]).astype("float")
 		y["train"] = np.array([labels[url] for url in urls["train"]], dtype=int)
 
 		# concatenate the different features/labels for the testing sources
+  		# kết hợp các tính năng/nhãn khác nhau cho các nguồn đào tạo
 		X["test"] = np.asarray([list(itertools.chain(*[features[feat][url] for feat in args.features])) for url in urls["test"]]).astype("float")
 		y["test"] = np.array([labels[url] for url in urls["test"]], dtype=int)
 
 		# normalize the features values
+		#chuẩn hóa
 		scaler = MinMaxScaler()
 		scaler.fit(X["train"])
 		X["train"] = scaler.transform(X["train"])
 		X["test"] = scaler.transform(X["test"])
 
 		# fine-tune the model
+		# tinh chỉnh mô hình
 		clf_cv = GridSearchCV(SVC(), scoring="f1_macro", cv=num_folds, n_jobs=4, param_grid=params_svm)
 		clf_cv.fit(X["train"], y["train"])
 
@@ -207,9 +215,11 @@ if __name__ == "__main__":
 		clf.fit(X["train"], y["train"])
 		
 		# generate predictions
+		# tạo dự đoán
 		pred = clf.predict(X["test"])
 		
 		# generate probabilites
+		# tạo xác suất
 		prob = clf.predict_proba(X["test"])
 
 		# cumulate the actual and predicted labels, and the probabilities over the different folds.  then, move the index
@@ -219,6 +229,7 @@ if __name__ == "__main__":
 		i += y["test"].shape[0]
 
 	# calculate the performance metrics on the whole set of predictions (5 folds all together)
+	# tính số liệu hiệu suất trên tập dự đoán
 	results = calculate_metrics(actual, predicted)
 
 	# display the performance metrics
@@ -228,6 +239,7 @@ if __name__ == "__main__":
 	logger.info(f"MAE: {results[3]}")
 
 	# map the actual and predicted labels to their categorical format
+	# ánh xạ các nhãn thực tế và dự đoán theo định dạng phân loại của chúng
 	predicted = np.array([int2label[args.task][int(l)] for l in predicted])
 	actual = np.array([int2label[args.task][int(l)] for l in actual])
 
@@ -240,11 +252,13 @@ if __name__ == "__main__":
 	df_out.to_csv(os.path.join(out_dir, "predictions.tsv"), index=False, columns=columns)
 
 	# write the experiment results in a tabular format
+	# viết kết quả thí nghiệm dưới dạng bảng
 	res = PrettyTable()
 	res.field_names = ["Macro-F1", "Accuracy", "Flip error-rate", "MAE"]
 	res.add_row(results)
 
 	# write the experiment summary and outcome into a text file and save it to the output directory
+	# viêts tóm tắt thí nghiệm và kết quả vào file
 	with open(os.path.join(out_dir, "results.txt"), "w") as f:
 		f.write(summary.get_string(title="Experiment Summary") + "\n")
 		f.write(res.get_string(title="Results"))
